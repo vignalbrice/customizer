@@ -1,0 +1,93 @@
+@import url("https://rsms.me/inter/inter.css");
+
+html,
+body,
+#root {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  outline: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+body {
+  background: white;
+  font-family: "Inter var", sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.picker {
+  position: absolute !important;
+  top: 74px;
+  left: 70px;
+  width: 90px !important;
+  height: 90px !important;
+}
+
+h1 {
+  position: absolute;
+  top: 43px;
+  left: 140px;
+  padding: 0;
+  margin: 40px;
+  font-size: 5em;
+  line-height: 0.7em;
+  letter-spacing: -6px;
+  color: #272730;
+}
+
+.select-mesh {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  display: flex;
+  position: absolute;
+  width: 100%;
+  bottom: 20px;
+  z-index: 2;
+}
+.card {
+  border: 1px solid #00a3ff !important;
+  border-radius: 25px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  padding-left: 20px;
+  padding-right: 20px;
+  margin: 0 10px;
+  min-width: 180px;
+  text-align: center;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.joystick {
+  position: absolute;
+  bottom: 160px;
+  right: 10px;
+}
+
+.image-controls {
+  position: absolute;
+  bottom: 180px;
+  left: 10px;
+  display: flex;
+}
+.image-controls.active {
+  opacity: 1;
+  visibility: visible;
+}
+.button--scale {
+  width: 35px;
+  height: 35px;
+  background-color: #00a3ff;
+  color: #fff;
+  font-size: 15px;
+  margin: 0 3px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+}

@@ -1,24 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF, useHelper } from "@react-three/drei";
 import { useFrame, useLoader } from "@react-three/fiber";
-import { proxy, useSnapshot } from "valtio";
+import { useSnapshot } from "valtio";
+import ProjectedMaterial from "three-projected-material";
+import { useComputedScaledDimensions } from "../../hooks/useComputedScaledDimensions";
 
-const state = proxy({
-  current: null,
-  items: {
-    laces: "#ffffff",
-    mesh: "#ffffff",
-    caps: "#ffffff",
-    inner: "#ffffff",
-    sole: "#ffffff",
-    stripes: "#ffffff",
-    band: "#ffffff",
-    patch: "#ffffff",
-  },
-});
-
-export default function Model(props) {
+export default function Model({
+  cameraRef,
+  frontLCamera,
+  frontRCamera,
+  leftCameraLF,
+  leftCameraRF,
+  rightCameraLF,
+  rightCameraRF,
+  state,
+}) {
   const group = useRef();
   const { scene } = useGLTF("/air-force.glb");
   const snap = useSnapshot(state);
@@ -27,7 +24,6 @@ export default function Model(props) {
     THREE.TextureLoader,
     "./NikeAirForce1_NormalMap_2k.png"
   );
-  const camera = scene.getObjectByName("Camera");
 
   // Cursor showing current color
   const [hovered, set] = useState(null);
@@ -38,55 +34,136 @@ export default function Model(props) {
       hovered ? cursor : auto
     )}'), auto`;
   }, [hovered]);
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    group.current.rotation.y = Math.sin(t / 4) / 8;
+    group.current.position.y = (-9 + Math.sin(t / 1.5)) / 10;
+  });
+  const texture = useLoader(THREE.TextureLoader, "sonic.png");
+
+  // Start the projection via this hooks
+  useEffect(() => {
+    if (meshRef.current["Empeigne_R"]) {
+      const material = new ProjectedMaterial({
+        texture,
+        camera: frontRCamera,
+        name: meshRef.current["Empeigne_R"].name,
+        color: meshRef.current["Empeigne_R"].material.color,
+        textureScale: 1,
+      });
+      meshRef.current["Empeigne_R"].material = material;
+      meshRef.current["Empeigne_R"].material.project?.(
+        meshRef.current["Empeigne_R"]
+      );
+    }
+  }, []);
+  // Move Image via this hooks
+  useEffect(() => {
+    if (meshRef.current["Empeigne_R"].material) {
+      meshRef.current["Empeigne_R"].material.uniforms.textureOffset.value =
+        new THREE.Vector2(snap.dragStart.x, snap.dragStart.y);
+    }
+  }, [snap.dragStart.x, snap.dragStart.y]);
+  const [widthScaled, heightScaled] = useComputedScaledDimensions(
+    texture,
+    frontRCamera,
+    snap.scale
+  );
+  // Resize Image via this hooks
+  useEffect(() => {
+    meshRef.current["Empeigne_R"].material.uniforms.widthScaled.value =
+      widthScaled;
+    meshRef.current["Empeigne_R"].material.uniforms.heightScaled.value =
+      heightScaled;
+  }, [widthScaled, heightScaled]);
+
   useEffect(() => {
     if (group.current) {
       group.current.position.y = -1;
-      group.current.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.name.length - 1 === "L") {
-          console.log(child.name);
-          child.visible = false;
+      group.current.name = "air-force-one";
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          if (child.name.slice(child.name.length - 1) === "L") {
+            child.layers.set(20);
+            child.visible = false;
+          } else {
+            child.layers.set(21);
+          }
+          if (child.name.includes("_L") && child.name !== "Filets_L") {
+            state.items = [
+              ...state.items,
+              {
+                [child.name
+                  .replace("_L", "")
+                  .replace("_", " ")
+                  .replace("_", " ")]: "#FFF",
+                meshName: child.name
+                  .replace("_L", "")
+                  .replace("_", " ")
+                  .replace("_", " "),
+              },
+            ];
+          }
         }
+        cameraRef.current.layers.toggle(21);
       });
     }
   }, []);
 
   return (
-    <group
-      ref={group}
-      dispose={null}
-      // onPointerOver={(e) => (e.stopPropagation(), set(e.object.material.name))}
-      // onPointerOut={(e) => e.intersections.length === 0 && set(null)}
-      // onPointerMissed={() => (state.current = null)}
-      // onPointerDown={(e) => (
-      // e.stopPropagation(), (state.current = e.object.material.name)
-      // )}
-    >
-      {scene.children
-        .filter((el) => el instanceof THREE.Mesh)
-        .map((m, i) => {
-          normal.wrapS = THREE.RepeatWrapping;
-          normal.wrapT = THREE.RepeatWrapping;
-          normal.repeat.x = 1;
-          normal.repeat.y = -1;
-          m.material.normalMap = normal;
-          return (
-            <mesh
-              key={i}
-              ref={(el) => {
-                return (meshRef.current[i] = el);
-              }}
-              castShadow
-              receiveShadow
-              geometry={m.geometry}
-              name={m.name}
-              material={m.material.clone()}
-              position={m.position}
-              rotation={m.rotation}
-              material-color={"#FFF"}
-            ></mesh>
-          );
-        })}
-    </group>
+    <>
+      <group
+        ref={group}
+        dispose={null}
+        onPointerOver={(e) => (
+          e.stopPropagation(),
+          set(
+            e.object.name
+              .replace("_L", "")
+              .replace("_R", "")
+              .replace("_", " ")
+              .replace("_", " ")
+          )
+        )}
+        onPointerOut={(e) => e.intersections.length === 0 && set(null)}
+        onPointerMissed={() => (state.current = null)}
+        onPointerDown={(e) => (
+          e.stopPropagation(),
+          (state.current = e.object.name
+            .replace("_L", "")
+            .replace("_R", "")
+            .replace("_", " ")
+            .replace("_", " "))
+        )}
+      >
+        {scene.children
+          .filter((el) => el instanceof THREE.Mesh)
+          .map((m, i) => {
+            normal.wrapS = THREE.RepeatWrapping;
+            normal.wrapT = THREE.RepeatWrapping;
+            normal.repeat.x = 1;
+            normal.repeat.y = -1;
+            m.material.normalMap = normal;
+            return (
+              <mesh
+                key={i}
+                ref={(el) => {
+                  return (meshRef.current[m.name] = el);
+                }}
+                castShadow
+                receiveShadow
+                geometry={m.geometry}
+                name={m.name}
+                material={m.material}
+                position={m.position}
+                rotation={m.rotation}
+                material-color={snap.items[m.name]}
+              ></mesh>
+            );
+          })}
+      </group>
+    </>
   );
 }
 
